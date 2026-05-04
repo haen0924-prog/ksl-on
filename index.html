@@ -750,7 +750,7 @@ body.admin-mode .admin-badge { display: inline-block; }
     </div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="toggleAddForm()">취소</button>
-      <button class="btn btn-primary" onclick="addVideo()">등록</button>
+      <button class="btn btn-primary" id="addVideoSubmitBtn" onclick="addVideo()">등록</button>
     </div>
   </div>
 
@@ -1166,6 +1166,11 @@ async function addVideo() {
   const vid = ytId(urlVal);
   if (!vid) { showToast('유효한 유튜브 URL이 아닙니다.', 'error'); return; }
 
+  // 버튼 로딩 상태
+  const btn = document.getElementById('addVideoSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '등록 중...';
+
   const v = {
     id:    Date.now().toString(),
     vid,
@@ -1175,30 +1180,41 @@ async function addVideo() {
     date:  new Date().toLocaleDateString('ko-KR')
   };
   try {
-    await sbFetch('videos', {
+    // return=representation 으로 저장 확인
+    const result = await sbFetch('videos', {
       method: 'POST',
-      prefer: 'return=minimal',
+      prefer: 'return=representation',
       body: JSON.stringify(v)
     });
-    db.videos.push(v);
+    // 결과가 배열이면 저장 성공
+    const saved = Array.isArray(result) ? result[0] : v;
+    db.videos.push(saved);
     document.getElementById('urlInput').value   = '';
     document.getElementById('titleInput').value = '';
-    toggleAddForm();
+    // 폼은 열어둔 채로 — 연속 등록 편하게
     renderVideos();
     initFan();
-    showToast('등록됐습니다!', 'success');
-  } catch(e) { showToast('등록 실패: ' + e.message, 'error'); }
+    showToast('✅ 등록됐습니다!', 'success');
+  } catch(e) {
+    showToast('❌ 등록 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '등록';
+  }
 }
 
 async function delVideo(id) {
   if (!confirm('삭제할까요?')) return;
   try {
-    await sbFetch(`videos?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await sbFetch(`videos?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      prefer: 'return=minimal'
+    });
     db.videos = db.videos.filter(v => v.id !== id);
     renderVideos();
     initFan();
-    showToast('삭제됨', 'error');
-  } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+    showToast('삭제됐습니다.', 'error');
+  } catch(e) { showToast('❌ 삭제 실패: ' + e.message, 'error'); }
 }
 
 /* ══════════════════════════════════════════════
