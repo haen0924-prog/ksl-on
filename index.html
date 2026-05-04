@@ -1232,6 +1232,8 @@ function closePlayer() {
   document.getElementById('playerModal').classList.remove('open');
   document.getElementById('playerIframe').src = '';
   document.body.style.overflow = '';
+  // 모달 닫을 때도 백그라운드 갱신
+  refreshData();
 }
 function closePlayerIfBack(e) {
   if (e.target === document.getElementById('playerModal')) closePlayer();
@@ -1300,6 +1302,31 @@ document.addEventListener('keydown', e => {
 loadFromSupabase().then(() => {
   if (location.search.includes('admin')) openAdmin();
 });
+
+// 앱이 백그라운드에서 다시 포그라운드로 올 때 (모바일 웹앱)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    refreshData();
+  }
+});
+
+// 포커스 복귀 시 (PC 탭 전환 등)
+window.addEventListener('focus', () => {
+  refreshData();
+});
+
+// 부드럽게 백그라운드 갱신 (로딩 오버레이 없이)
+async function refreshData() {
+  try {
+    const videos = await sbFetch('videos?order=created_at.asc');
+    db.videos = videos || [];
+    // 현재 보고 있는 화면만 갱신
+    if (currentCat) renderVideos();
+    initFan();
+  } catch(e) {
+    console.warn('백그라운드 갱신 실패:', e);
+  }
+}
 </script>
 </body>
 </html>
