@@ -504,6 +504,24 @@ body.admin-mode .sub-add-row { display: flex; }
 .admin-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 
 /* ── 토스트 ──────────────────────────────────── */
+/* 로딩 오버레이 */
+#loadingOverlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(253,248,240,0.92);
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+}
+.loading-spinner {
+  width: 44px; height: 44px;
+  border: 4px solid var(--border);
+  border-top-color: var(--c3);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--ink2); font-weight: 500; }
+
 #toast {
   position: fixed; bottom: 28px; right: 28px; z-index: 999;
   background: var(--ink); color: white;
@@ -546,6 +564,12 @@ body.admin-mode .admin-badge { display: inline-block; }
 <body>
 
 <!-- ── 헤더 ──────────────────────────────────── -->
+<!-- ── 로딩 오버레이 ────────────────────────── -->
+<div id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">수어온 데이터를 불러오는 중...</div>
+</div>
+
 <header>
   <div class="site-title" style="cursor:pointer" onclick="goHome()">
   <img src="logo.png" alt="수어온" style="height:36px; display:block;">
@@ -559,6 +583,7 @@ body.admin-mode .admin-badge { display: inline-block; }
 
 <!-- ── 홈 화면 ─────────────────────────────────── -->
 <div id="homeScreen">
+  <p class="home-subtitle">강원도수어문화원</p>
   <h1 class="home-lead">어떤 영상을 찾고 계신가요?</h1>
 
   <div class="menu-grid">
@@ -708,10 +733,34 @@ body.admin-mode .admin-badge { display: inline-block; }
 
 <script>
 /* ══════════════════════════════════════════════
+   Supabase 설정
+══════════════════════════════════════════════ */
+const SUPA_URL = 'https://njrbqfyxxwobthzrhqzm.supabase.co';
+const SUPA_KEY = 'sb_publishable_fLoNrGq_VxNo2AfqQ0oU4A_Zq5r7SDt';
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+/* ══════════════════════════════════════════════
    데이터 구조 & 초기화
 ══════════════════════════════════════════════ */
-const STORAGE_KEY = 'sueo_v2';
-const DEFAULT_PW   = 'admin1234';
+const DEFAULT_PW = 'admin1234';
 
 const MENUS = [
   {
@@ -740,22 +789,55 @@ const MENUS = [
   }
 ];
 
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  // 초기 데이터
-  const d = { pw: DEFAULT_PW, menus: {}, videos: [] };
-  MENUS.forEach(m => { d.menus[m.id] = [...m.defaultCats]; });
-  return d;
-}
-function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+// 메모리 캐시
+let db = { menus: {}, videos: [] };
+MENUS.forEach(m => { db.menus[m.id] = [...m.defaultCats]; });
 
-let db = loadData();
+// 관리자 비번은 localStorage에만 저장 (단순 보호용)
+function getPw() { return localStorage.getItem('sueo_pw') || DEFAULT_PW; }
+function setPw(pw) { localStorage.setItem('sueo_pw', pw); }
 
-// 관리자 세션 (새로고침시 초기화)
 let isAdmin = false;
+
+/* ── Supabase 로드 ─────────────────────────── */
+async function loadFromSupabase() {
+  showLoading(true);
+  try {
+    // 카테고리 로드
+    const cats = await sbFetch('categories?order=sort.asc');
+    if (cats && cats.length > 0) {
+      MENUS.forEach(m => { db.menus[m.id] = []; });
+      cats.forEach(c => {
+        if (db.menus[c.menu] !== undefined) db.menus[c.menu].push(c.cat);
+      });
+    } else {
+      // 최초 실행: 기본 카테고리 Supabase에 저장
+      const rows = [];
+      MENUS.forEach(m => {
+        m.defaultCats.forEach((cat, i) => rows.push({ menu: m.id, cat, sort: i }));
+      });
+      await sbFetch('categories', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify(rows)
+      });
+    }
+
+    // 영상 로드
+    const videos = await sbFetch('videos?order=created_at.asc');
+    db.videos = videos || [];
+
+  } catch(e) {
+    showToast('데이터 로딩 실패: ' + e.message, 'error');
+    console.error(e);
+  }
+  showLoading(false);
+  initFan();
+}
+
+function showLoading(on) {
+  document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none';
+}
 
 /* ══════════════════════════════════════════════
    유틸
@@ -843,28 +925,38 @@ function closeSubIfBack(e) {
   if (e.target === document.getElementById('subPanel')) closeSubPanel();
 }
 
-function addSubCat() {
+async function addSubCat() {
   const input = document.getElementById('subAddInput');
   const name = input.value.trim();
   if (!name) return;
   const m = MENUS[currentMenuIdx];
   if (db.menus[m.id].includes(name)) { showToast('이미 있는 카테고리입니다.', 'error'); return; }
-  db.menus[m.id].push(name);
-  saveData();
-  input.value = '';
-  renderSubCats(currentMenuIdx);
-  showToast(`"${name}" 추가됨`, 'success');
+  try {
+    await sbFetch('categories', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ menu: m.id, cat: name, sort: db.menus[m.id].length })
+    });
+    db.menus[m.id].push(name);
+    input.value = '';
+    renderSubCats(currentMenuIdx);
+    initFan();
+    showToast(`"${name}" 추가됨`, 'success');
+  } catch(e) { showToast('추가 실패: ' + e.message, 'error'); }
 }
 
-function delSubCat(menuIdx, cat) {
+async function delSubCat(menuIdx, cat) {
   if (!confirm(`"${cat}" 카테고리와 영상을 삭제할까요?`)) return;
   const m = MENUS[menuIdx];
-  db.menus[m.id] = db.menus[m.id].filter(c => c !== cat);
-  db.videos = db.videos.filter(v => !(v.menu === m.id && v.cat === cat));
-  saveData();
-  renderSubCats(menuIdx);
-  initFan();
-  showToast('삭제됨', 'error');
+  try {
+    await sbFetch(`categories?menu=eq.${encodeURIComponent(m.id)}&cat=eq.${encodeURIComponent(cat)}`, { method: 'DELETE' });
+    await sbFetch(`videos?menu=eq.${encodeURIComponent(m.id)}&cat=eq.${encodeURIComponent(cat)}`, { method: 'DELETE' });
+    db.menus[m.id] = db.menus[m.id].filter(c => c !== cat);
+    db.videos = db.videos.filter(v => !(v.menu === m.id && v.cat === cat));
+    renderSubCats(menuIdx);
+    initFan();
+    showToast('삭제됨', 'error');
+  } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
 }
 
 /* ══════════════════════════════════════════════
@@ -957,7 +1049,7 @@ function toggleAddForm() {
   document.getElementById('addForm').classList.toggle('open', addFormOpen);
 }
 
-function addVideo() {
+async function addVideo() {
   const urlVal   = document.getElementById('urlInput').value.trim();
   const titleVal = document.getElementById('titleInput').value.trim();
   if (!urlVal) { showToast('URL을 입력해 주세요.', 'error'); return; }
@@ -972,24 +1064,31 @@ function addVideo() {
     cat:   currentCat,
     date:  new Date().toLocaleDateString('ko-KR')
   };
-  db.videos.push(v);
-  saveData();
-
-  document.getElementById('urlInput').value   = '';
-  document.getElementById('titleInput').value = '';
-  toggleAddForm();
-  renderVideos();
-  initFan();
-  showToast('등록됐습니다!', 'success');
+  try {
+    await sbFetch('videos', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(v)
+    });
+    db.videos.push(v);
+    document.getElementById('urlInput').value   = '';
+    document.getElementById('titleInput').value = '';
+    toggleAddForm();
+    renderVideos();
+    initFan();
+    showToast('등록됐습니다!', 'success');
+  } catch(e) { showToast('등록 실패: ' + e.message, 'error'); }
 }
 
-function delVideo(id) {
+async function delVideo(id) {
   if (!confirm('삭제할까요?')) return;
-  db.videos = db.videos.filter(v => v.id !== id);
-  saveData();
-  renderVideos();
-  initFan();
-  showToast('삭제됨', 'error');
+  try {
+    await sbFetch(`videos?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+    db.videos = db.videos.filter(v => v.id !== id);
+    renderVideos();
+    initFan();
+    showToast('삭제됨', 'error');
+  } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
 }
 
 /* ══════════════════════════════════════════════
@@ -1032,7 +1131,7 @@ function closeAdminIfBack(e) {
 
 function loginAdmin() {
   const pw = document.getElementById('adminPwInput').value;
-  if (pw === db.pw) {
+  if (pw === getPw()) {
     isAdmin = true;
     document.body.classList.add('admin-mode');
     if (currentMenu) document.getElementById('addVideoBtn').style.display = '';
@@ -1059,8 +1158,7 @@ function logoutAdmin() {
 function changePw() {
   const np = document.getElementById('newPwInput').value.trim();
   if (np.length < 4) { showToast('4자 이상 입력해 주세요.', 'error'); return; }
-  db.pw = np;
-  saveData();
+  setPw(np);
   document.getElementById('newPwInput').value = '';
   showToast('비밀번호가 변경됐습니다.', 'success');
 }
@@ -1072,12 +1170,10 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════════
    시작
 ══════════════════════════════════════════════ */
-initFan();
-
-// URL에 ?admin 이 있으면 관리자 패널 자동 오픈
-if (location.search.includes('admin')) {
-  openAdmin();
-}
+// Supabase에서 데이터 로드 후 시작
+loadFromSupabase().then(() => {
+  if (location.search.includes('admin')) openAdmin();
+});
 </script>
 </body>
 </html>
