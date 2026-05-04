@@ -60,11 +60,12 @@ body::before {
 header {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   height: 60px;
-  background: rgba(253,248,240,0.92);
+  background: rgba(10,10,10,0.96);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 28px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.25);
 }
 
 .site-title {
@@ -78,6 +79,8 @@ header {
 }
 
 .header-btns { display:flex; gap:8px; align-items:center; }
+.btn-outline { background: transparent; color: #ccc; border: 1.5px solid rgba(255,255,255,0.2); }
+.btn-outline:hover { border-color: var(--c3); color: #fff; }
 
 .btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -549,8 +552,8 @@ body.admin-mode .admin-badge { display: inline-block; }
 </div>
   <div class="header-btns">
     <span class="admin-badge">관리자 모드</span>
-    <button class="btn btn-outline" onclick="openAdmin()" title="관리자 설정">⚙ 관리</button>
     <button class="btn btn-primary" id="addVideoBtn" onclick="toggleAddForm()" style="display:none">＋ 영상 추가</button>
+    <button class="btn btn-outline" id="adminLogoutHeaderBtn" onclick="logoutAdmin()" style="display:none; border-color:rgba(255,255,255,0.2); color:#aaa;">로그아웃</button>
   </div>
 </header>
 
@@ -1034,6 +1037,7 @@ function loginAdmin() {
     isAdmin = true;
     document.body.classList.add('admin-mode');
     if (currentMenu) document.getElementById('addVideoBtn').style.display = '';
+    document.getElementById('adminLogoutHeaderBtn').style.display = '';
     if (currentCat)  renderVideos();
     closeAdmin();
     showToast('관리자 모드 활성화 ✓', 'success');
@@ -1047,6 +1051,7 @@ function logoutAdmin() {
   isAdmin = false;
   document.body.classList.remove('admin-mode');
   document.getElementById('addVideoBtn').style.display = 'none';
+  document.getElementById('adminLogoutHeaderBtn').style.display = 'none';
   if (currentCat) renderVideos();
   closeAdmin();
   showToast('관리자 모드 해제');
@@ -1069,6 +1074,11 @@ document.addEventListener('keydown', e => {
    시작
 ══════════════════════════════════════════════ */
 initFan();
+
+// URL에 ?admin 이 있으면 관리자 패널 자동 오픈
+if (location.search.includes('admin')) {
+  openAdmin();
+}
 </script>
 </body>
 </html>
