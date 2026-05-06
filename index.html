@@ -990,7 +990,7 @@ function renderRecentVideos() {
     const menuColor = menu ? menu.color : 'var(--c3)';
     const menuName = menu ? menu.name : '';
     return `
-    <div class="recent-card" onclick="playVideo('${escH(v.id)}','${escH(v.title)}')">
+    <div class="recent-card" onclick="playVideo('${escH(v.id)}')">
       <div class="recent-thumb">
         <img src="https://img.youtube.com/vi/${v.vid}/hqdefault.jpg" alt="${escH(v.title)}"
              onerror="this.src='https://img.youtube.com/vi/${v.vid}/mqdefault.jpg'">
@@ -1156,7 +1156,7 @@ function renderVideos() {
   empty.style.display = 'none';
 
   grid.innerHTML = filtered.slice().reverse().map(v => `
-    <div class="video-card" onclick="playVideo('${escH(v.id)}','${escH(v.title)}')">
+    <div class="video-card" onclick="playVideo('${escH(v.id)}')">
       <div class="thumb-wrap">
         <img src="${thumb(v.vid)}" alt="${escH(v.title)}"
              onerror="this.src='https://img.youtube.com/vi/${v.vid}/mqdefault.jpg'">
@@ -1312,10 +1312,10 @@ async function submitEdit() {
 /* ══════════════════════════════════════════════
    영상 재생
 ══════════════════════════════════════════════ */
-function playVideo(id, title) {
+function playVideo(id) {
   const v = db.videos.find(v => v.id === id);
   if (!v) return;
-  document.getElementById('playerTitle').textContent = decodeURIComponent(title.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+  document.getElementById('playerTitle').textContent = v.title;
   document.getElementById('playerIframe').src = embedUrl(v.vid);
   document.getElementById('playerModal').classList.add('open');
   document.body.style.overflow = 'hidden';
