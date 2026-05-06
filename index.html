@@ -806,6 +806,30 @@ body.admin-mode .admin-badge { display: inline-block; }
   </div>
 </div>
 
+<!-- ── 영상 수정 모달 ─────────────────────────── -->
+<div id="editModal" onclick="closeEditIfBack(event)" style="position:fixed;inset:0;z-index:400;background:rgba(28,20,16,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:460px;padding:28px;animation:popIn 0.25s ease;">
+    <div style="font-size:18px;font-weight:900;margin-bottom:20px;">✏️ 영상 수정</div>
+    <input type="hidden" id="editVideoId">
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
+      <label class="admin-label">제목</label>
+      <input class="admin-input" id="editTitleInput" placeholder="영상 제목">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
+      <label class="admin-label">유튜브 URL</label>
+      <input class="admin-input" id="editUrlInput" placeholder="https://www.youtube.com/watch?v=...">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:20px;">
+      <label class="admin-label">카테고리</label>
+      <select class="admin-input" id="editCatSelect"></select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeEditModal()">취소</button>
+      <button class="btn btn-primary" id="editSubmitBtn" onclick="submitEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 토스트 ──────────────────────────────────── -->
 <div id="toast"></div>
 
@@ -1144,7 +1168,11 @@ function renderVideos() {
         <div class="card-title">${escH(v.title)}</div>
         <div class="card-meta">
           <span class="card-date">${v.date}</span>
-          ${isAdmin ? `<button class="btn-danger-sm" onclick="event.stopPropagation();delVideo('${escH(v.id)}')">삭제</button>` : ''}
+          ${isAdmin ? `
+            <div style="display:flex;gap:4px;">
+              <button class="btn-danger-sm" style="color:var(--c3);border:none;" onclick="event.stopPropagation();openEditModal('${escH(v.id)}')">수정</button>
+              <button class="btn-danger-sm" onclick="event.stopPropagation();delVideo('${escH(v.id)}')">삭제</button>
+            </div>` : ''}
         </div>
       </div>
     </div>`).join('');
@@ -1215,6 +1243,70 @@ async function delVideo(id) {
     initFan();
     showToast('삭제됐습니다.', 'error');
   } catch(e) { showToast('❌ 삭제 실패: ' + e.message, 'error'); }
+}
+
+/* ══════════════════════════════════════════════
+   영상 수정
+══════════════════════════════════════════════ */
+function openEditModal(id) {
+  const v = db.videos.find(v => v.id === id);
+  if (!v) return;
+
+  document.getElementById('editVideoId').value  = id;
+  document.getElementById('editTitleInput').value = v.title;
+  document.getElementById('editUrlInput').value   = `https://www.youtube.com/watch?v=${v.vid}`;
+
+  // 현재 메뉴의 카테고리 목록으로 셀렉트 채우기
+  const sel = document.getElementById('editCatSelect');
+  sel.innerHTML = db.menus[currentMenu.id].map(cat =>
+    `<option value="${escH(cat)}" ${cat === v.cat ? 'selected' : ''}>${escH(cat)}</option>`
+  ).join('');
+
+  document.getElementById('editModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function closeEditIfBack(e) {
+  if (e.target === document.getElementById('editModal')) closeEditModal();
+}
+
+async function submitEdit() {
+  const id       = document.getElementById('editVideoId').value;
+  const title    = document.getElementById('editTitleInput').value.trim();
+  const urlVal   = document.getElementById('editUrlInput').value.trim();
+  const cat      = document.getElementById('editCatSelect').value;
+
+  if (!title) { showToast('제목을 입력해 주세요.', 'error'); return; }
+  const vid = ytId(urlVal);
+  if (!vid)  { showToast('유효한 유튜브 URL이 아닙니다.', 'error'); return; }
+
+  const btn = document.getElementById('editSubmitBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    await sbFetch(`videos?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ title, vid, cat })
+    });
+    // 로컬 캐시 업데이트
+    const idx = db.videos.findIndex(v => v.id === id);
+    if (idx !== -1) Object.assign(db.videos[idx], { title, vid, cat });
+
+    closeEditModal();
+    renderVideos();
+    initFan();
+    showToast('✅ 수정됐습니다!', 'success');
+  } catch(e) {
+    showToast('❌ 수정 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저장';
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -1292,7 +1384,7 @@ function changePw() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePlayer(); closeAdmin(); closeSubPanel(); }
+  if (e.key === 'Escape') { closePlayer(); closeAdmin(); closeSubPanel(); closeEditModal(); }
 });
 
 /* ══════════════════════════════════════════════
