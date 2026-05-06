@@ -770,8 +770,8 @@ body.admin-mode .admin-badge { display: inline-block; }
       <button class="player-close" onclick="closePlayer()">✕</button>
     </div>
     <div class="player-frame">
-      <iframe id="playerIframe" allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+      <iframe id="playerIframe" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
       </iframe>
     </div>
   </div>
@@ -953,7 +953,7 @@ function ytId(url) {
   return m ? m[1] : (url.match(/^[A-Za-z0-9_-]{11}$/) ? url : null);
 }
 function thumb(vid) { return `https://img.youtube.com/vi/${vid}/hqdefault.jpg`; }
-function embedUrl(vid) { return `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`; }
+function embedUrl(vid) { return `https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&rel=0&origin=${encodeURIComponent(location.origin)}`; }
 
 let toastTimer;
 function showToast(msg, type='') {
