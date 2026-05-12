@@ -359,6 +359,9 @@ header {
 .sub-cat-del { display: none; position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #d03020; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
 body.admin-mode .sub-cat-del { display: flex; }
 
+.sub-cat-edit { display: none; position: absolute; top: -8px; left: -8px; width: 20px; height: 20px; border-radius: 50%; background: #3a6ee8; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
+body.admin-mode .sub-cat-edit { display: flex; }
+
 .sub-add-row { display: none; align-items: center; gap: 8px; margin-top: 12px; }
 body.admin-mode .sub-add-row { display: flex; }
 .sub-add-input { flex: 1; padding: 10px 14px; border-radius: 50px; border: 2px solid var(--border); background: white; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
@@ -676,6 +679,28 @@ body.admin-mode .admin-badge { display: inline-block; }
       <div style="text-align:right;">
         <button class="btn btn-primary" onclick="changePw()" style="border-radius:8px;">변경</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 카테고리 수정 모달 ── -->
+<div id="editCatModal" onclick="closeEditCatIfBack(event)" style="position:fixed;inset:0;z-index:500;background:rgba(28,20,16,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:420px;padding:28px;animation:popIn 0.25s ease;">
+    <div style="font-size:18px;font-weight:900;margin-bottom:6px;">✏️ 카테고리 수정</div>
+    <div style="font-size:13px;color:var(--ink2);margin-bottom:20px;" id="editCatOldName"></div>
+    <input type="hidden" id="editCatMenuIdx">
+    <input type="hidden" id="editCatOldVal">
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:20px;">
+      <label class="admin-label">새 이름</label>
+      <input class="admin-input" id="editCatNewName" placeholder="새 카테고리 이름"
+             onkeydown="if(event.key==='Enter') submitEditCat()">
+    </div>
+    <div style="font-size:12px;color:#c87e1a;background:#fff8ed;border-radius:8px;padding:8px 12px;margin-bottom:16px;">
+      ⚠️ 해당 카테고리의 영상들도 자동으로 업데이트됩니다.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeEditCatModal()">취소</button>
+      <button class="btn btn-primary" id="editCatSubmitBtn" onclick="submitEditCat()">저장</button>
     </div>
   </div>
 </div>
@@ -1069,6 +1094,7 @@ function renderSubCats(menuIdx) {
         <span class="sub-cat-dot" style="background:${m.color}"></span>
         <span>${escH(p.sub)}</span>
         <span class="sub-cat-count">${cnt}</span>
+        <span class="sub-cat-edit" onclick="event.stopPropagation();openEditCat(${menuIdx},'${escH(p.full)}')" title="수정">✎</span>
         <span class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</span>
       </button>`;
     });
@@ -1093,6 +1119,7 @@ function renderSubCats(menuIdx) {
         <span class="sub-cat-dot" style="background:${m.color}"></span>
         <span>${escH(p.sub)}</span>
         <span class="sub-cat-count">${cnt}</span>
+        <span class="sub-cat-edit" onclick="event.stopPropagation();openEditCat(${menuIdx},'${escH(p.full)}')" title="수정">✎</span>
         <span class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</span>
       </button>`;
     });
@@ -1100,6 +1127,75 @@ function renderSubCats(menuIdx) {
   }
 
   container.innerHTML = html;
+}
+
+/* ── 카테고리 수정 ── */
+function openEditCat(menuIdx, oldCat) {
+  document.getElementById('editCatMenuIdx').value  = menuIdx;
+  document.getElementById('editCatOldVal').value   = oldCat;
+  const parsed = parseCat(oldCat);
+  document.getElementById('editCatOldName').textContent = '현재 이름: ' + (parsed.group ? parsed.group + ' › ' + parsed.sub : oldCat);
+  document.getElementById('editCatNewName').value  = oldCat;
+  document.getElementById('editCatModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    const inp = document.getElementById('editCatNewName');
+    inp.focus(); inp.select();
+  }, 100);
+}
+
+function closeEditCatModal() {
+  document.getElementById('editCatModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function closeEditCatIfBack(e) {
+  if (e.target === document.getElementById('editCatModal')) closeEditCatModal();
+}
+
+async function submitEditCat() {
+  const menuIdx = parseInt(document.getElementById('editCatMenuIdx').value);
+  const oldCat  = document.getElementById('editCatOldVal').value;
+  const newCat  = document.getElementById('editCatNewName').value.trim();
+
+  if (!newCat) { showToast('이름을 입력해 주세요.', 'error'); return; }
+  if (newCat === oldCat) { closeEditCatModal(); return; }
+
+  const m = MENUS[menuIdx];
+  if (db.menus[m.id].includes(newCat)) { showToast('이미 있는 카테고리 이름입니다.', 'error'); return; }
+
+  const btn = document.getElementById('editCatSubmitBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  try {
+    // 1) categories 테이블 업데이트
+    await sbFetch(`categories?menu=eq.${encodeURIComponent(m.id)}&cat=eq.${encodeURIComponent(oldCat)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ cat: newCat })
+    });
+
+    // 2) 해당 카테고리 영상들 cat 일괄 업데이트
+    await sbFetch(`videos?menu=eq.${encodeURIComponent(m.id)}&cat=eq.${encodeURIComponent(oldCat)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ cat: newCat })
+    });
+
+    // 3) 로컬 캐시 업데이트
+    const idx = db.menus[m.id].indexOf(oldCat);
+    if (idx !== -1) db.menus[m.id][idx] = newCat;
+    db.videos.forEach(v => { if (v.menu === m.id && v.cat === oldCat) v.cat = newCat; });
+
+    closeEditCatModal();
+    renderSubCats(menuIdx);
+    initFan();
+    showToast('✅ 카테고리 이름이 변경됐습니다!', 'success');
+  } catch(e) {
+    showToast('❌ 수정 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '저장';
+  }
 }
 
 function closeSubPanel() { document.getElementById('subPanel').classList.remove('open'); document.body.style.overflow = ''; }
@@ -1375,7 +1471,7 @@ function changePw() {
 /* ── 키보드 단축키 ── */
 document.addEventListener('keydown', e => {
   // Escape: 모달/패널 닫기
-  if (e.key === 'Escape') { closePlayer(); closeAdmin(); closeSubPanel(); closeEditModal(); }
+  if (e.key === 'Escape') { closePlayer(); closeAdmin(); closeSubPanel(); closeEditModal(); closeEditCatModal(); }
   // Ctrl+K or /: 검색 포커스
   if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) {
     e.preventDefault();
