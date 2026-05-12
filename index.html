@@ -350,7 +350,7 @@ header {
 .sub-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .sub-cat-count { font-size: 11px; font-weight: 500; opacity: 0.7; font-family: monospace; }
 
-.sub-cat-del { display: none; position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #d03020; color: white; font-size: 10px; border: none; cursor: pointer; align-items: center; justify-content: center; }
+.sub-cat-del { display: none; position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #d03020; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
 body.admin-mode .sub-cat-del { display: flex; }
 
 .sub-add-row { display: none; align-items: center; gap: 8px; margin-top: 12px; }
@@ -1063,7 +1063,7 @@ function renderSubCats(menuIdx) {
         <span class="sub-cat-dot" style="background:${m.color}"></span>
         <span>${escH(p.sub)}</span>
         <span class="sub-cat-count">${cnt}</span>
-        <button class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</button>
+        <span class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</span>
       </button>`;
     });
     html += `</div>`;
@@ -1087,7 +1087,7 @@ function renderSubCats(menuIdx) {
         <span class="sub-cat-dot" style="background:${m.color}"></span>
         <span>${escH(p.sub)}</span>
         <span class="sub-cat-count">${cnt}</span>
-        <button class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</button>
+        <span class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</span>
       </button>`;
     });
     html += `</div>`;
