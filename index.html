@@ -75,7 +75,7 @@ header {
 /* ── 검색바 (헤더 중앙) ── */
 .header-search {
   flex: 1;
-  max-width: 420px;
+  max-width: 440px;
   position: relative;
   display: flex;
   align-items: center;
@@ -83,36 +83,42 @@ header {
 
 .header-search-input {
   width: 100%;
-  background: rgba(255,255,255,0.08);
-  border: 1.5px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.95);
+  border: 2px solid transparent;
   border-radius: 50px;
-  padding: 8px 16px 8px 38px;
-  color: #fff;
-  font-size: 13px;
+  padding: 9px 40px 9px 40px;
+  color: #1c1410;
+  font-size: 14px;
+  font-weight: 500;
   font-family: inherit;
   outline: none;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
-.header-search-input::placeholder { color: rgba(255,255,255,0.35); }
+.header-search-input::placeholder { color: #aaa; font-weight: 400; }
 .header-search-input:focus {
   border-color: var(--c3);
-  background: rgba(58,110,232,0.12);
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(58,110,232,0.22);
 }
 .header-search-icon {
-  position: absolute; left: 12px;
-  color: rgba(255,255,255,0.4);
-  font-size: 15px; pointer-events: none;
+  position: absolute; left: 13px;
+  color: #888;
+  font-size: 16px; pointer-events: none;
+  z-index: 1;
 }
 .header-search-clear {
-  position: absolute; right: 10px;
-  background: none; border: none;
-  color: rgba(255,255,255,0.4);
-  cursor: pointer; font-size: 15px;
-  display: none; padding: 2px;
-  transition: color 0.15s;
+  position: absolute; right: 11px;
+  background: #e8ddd0; border: none;
+  color: #5a4a3a;
+  cursor: pointer; font-size: 12px;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  transition: all 0.15s; line-height: 1;
+  font-weight: 700;
 }
-.header-search-clear:hover { color: #fff; }
-.header-search-clear.visible { display: block; }
+.header-search-clear:hover { background: #d03020; color: #fff; }
+.header-search-clear.visible { display: flex; }
 
 .header-btns { display:flex; gap:8px; align-items:center; flex-shrink:0; }
 
@@ -352,6 +358,17 @@ body.admin-mode .sub-add-row { display: flex; }
 .sub-add-input { flex: 1; padding: 10px 14px; border-radius: 50px; border: 2px solid var(--border); background: white; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
 .sub-add-input:focus { border-color: var(--c3); }
 
+/* ── 그룹 헤더 (지명수어_춘체으로 저장 시 지명수어 그룹 / 춘체 버튼) ── */
+.sub-group-header {
+  width: 100%;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+  color: var(--ink2); padding: 12px 4px 8px;
+  margin-top: 4px; border-top: 1px solid var(--border);
+}
+.sub-group-header.first-group { border-top: none; padding-top: 0; margin-top: 0; }
+.sub-group-pills { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; padding-bottom: 4px; }
+
 /* ── 영상 목록 화면 ── */
 #videoScreen { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 80px 32px 48px; }
 #videoScreen.active { display: block; }
@@ -450,8 +467,8 @@ body.admin-mode .admin-badge { display: inline-block; }
   .recent-section { max-width: 360px; }
   #videoScreen, #searchScreen { padding: 76px 16px 40px; }
   .sub-sheet { padding: 24px 20px 40px; }
-  .header-search { max-width: 180px; }
-  .header-search-input { font-size: 12px; padding: 7px 12px 7px 34px; }
+  .header-search { max-width: 200px; }
+  .header-search-input { font-size: 13px; padding: 8px 36px 8px 36px; }
 }
 </style>
 </head>
@@ -583,6 +600,8 @@ body.admin-mode .admin-badge { display: inline-block; }
     <span class="sep">›</span>
     <span id="bMenu" onclick="openSubFromBread()"></span>
     <span class="sep">›</span>
+    <span id="bGroup" style="display:none; cursor:pointer;" onclick="openGroupPanel()"></span>
+    <span id="bGroupSep" class="sep" style="display:none;">›</span>
     <span id="bCat" style="font-weight:700; color:var(--ink)"></span>
   </div>
   <div class="vs-title" id="vsTitle"></div>
@@ -832,7 +851,7 @@ function renderSearchResults(query) {
                          background:${menu?menu.light:'#edf3ff'}; color:${menuColor};">
               ${menuName}
             </span>
-            <span style="font-size:10px; color:var(--ink2);">${escH(v.cat)}</span>
+            <span style="font-size:10px; color:var(--ink2);">${escH(parseCat(v.cat).sub)}</span>
           </div>
           <div class="card-title">${highlight(v.title, query)}</div>
           <div class="card-meta">
@@ -969,7 +988,7 @@ function renderRecentVideos() {
       </div>
       <div class="recent-body">
         <div class="recent-card-title">${escH(v.title)}</div>
-        <div class="recent-card-meta">${v.cat} · ${v.date}</div>
+        <div class="recent-card-meta">${parseCat(v.cat).sub} · ${v.date}</div>
       </div>
     </div>`;
   }).join('');
@@ -994,21 +1013,87 @@ function openSubPanel(menuIdx) {
   document.body.style.overflow = 'hidden';
 }
 
+/* ─────────────────────────────────────────────
+   카테고리 파싱 유틸:
+   "지명수어_춘천" → { group:"지명수어", sub:"춘천" }
+   "정보영상"      → { group:null, sub:"정보영상" }
+───────────────────────────────────────────── */
+function parseCat(cat) {
+  const idx = cat.indexOf('_');
+  if (idx > 0) return { group: cat.slice(0, idx), sub: cat.slice(idx + 1), full: cat };
+  return { group: null, sub: cat, full: cat };
+}
+
 function renderSubCats(menuIdx) {
   const m = MENUS[menuIdx];
   const cats = db.menus[m.id];
   const container = document.getElementById('subCats');
-  container.innerHTML = cats.map(cat => {
-    const cnt = db.videos.filter(v => v.menu === m.id && v.cat === cat).length;
-    return `
-      <button class="sub-cat-btn" onclick="selectCat(${menuIdx},'${escH(cat)}')"
-              style="border-color:${m.color}20; color:${m.color}">
+
+  // 그룹 분류: { groupName: [parsed, ...], ungrouped: [parsed, ...] }
+  const groups = {};
+  const ungrouped = [];
+  cats.forEach(cat => {
+    const p = parseCat(cat);
+    if (p.group) {
+      if (!groups[p.group]) groups[p.group] = [];
+      groups[p.group].push(p);
+    } else {
+      ungrouped.push(p);
+    }
+  });
+
+  let html = '';
+  let isFirst = true;
+
+  // 그룹이 있는 것들 먼저
+  Object.keys(groups).forEach(groupName => {
+    const members = groups[groupName];
+    // 그룹 전체 영상 수
+    const totalCnt = members.reduce((acc, p) => acc + db.videos.filter(v => v.menu === m.id && v.cat === p.full).length, 0);
+    html += `<div class="sub-group-header ${isFirst ? 'first-group' : ''}">
+      <span style="opacity:0.5">📍</span>
+      <span>${escH(groupName)}</span>
+      <span style="font-size:10px; opacity:0.5; font-family:monospace; font-weight:400;">${totalCnt}</span>
+    </div>
+    <div class="sub-group-pills">`;
+    members.forEach(p => {
+      const cnt = db.videos.filter(v => v.menu === m.id && v.cat === p.full).length;
+      html += `<button class="sub-cat-btn" onclick="selectCat(${menuIdx},'${escH(p.full)}')"
+        style="border-color:${m.color}20; color:${m.color}">
         <span class="sub-cat-dot" style="background:${m.color}"></span>
-        <span>${escH(cat)}</span>
+        <span>${escH(p.sub)}</span>
         <span class="sub-cat-count">${cnt}</span>
-        <button class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(cat)}')" title="삭제">✕</button>
+        <button class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</button>
       </button>`;
-  }).join('');
+    });
+    html += `</div>`;
+    isFirst = false;
+  });
+
+  // 그룹 없는 것들
+  if (ungrouped.length > 0) {
+    if (!isFirst) {
+      html += `<div class="sub-group-header">
+        <span style="opacity:0.5">💡</span>
+        <span>기타</span>
+      </div><div class="sub-group-pills">`;
+    } else {
+      html += `<div class="sub-group-pills">`;
+    }
+    ungrouped.forEach(p => {
+      const cnt = db.videos.filter(v => v.menu === m.id && v.cat === p.full).length;
+      html += `<button class="sub-cat-btn" onclick="selectCat(${menuIdx},'${escH(p.full)}')"
+        style="border-color:${m.color}20; color:${m.color}">
+        <span class="sub-cat-dot" style="background:${m.color}"></span>
+        <span>${escH(p.sub)}</span>
+        <span class="sub-cat-count">${cnt}</span>
+        <button class="sub-cat-del" onclick="event.stopPropagation();delSubCat(${menuIdx},'${escH(p.full)}')" title="삭제">✕</button>
+      </button>`;
+    });
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 function closeSubPanel() { document.getElementById('subPanel').classList.remove('open'); document.body.style.overflow = ''; }
@@ -1050,6 +1135,8 @@ async function delSubCat(menuIdx, cat) {
 let currentMenu = null;
 let currentCat  = null;
 
+let currentGroup = null; // 그룹명 (예: "지명수어") or null
+
 function selectCat(menuIdx, cat) {
   currentMenu = MENUS[menuIdx];
   currentCat  = cat;
@@ -1060,11 +1147,28 @@ function selectCat(menuIdx, cat) {
   const vs = document.getElementById('videoScreen');
   vs.classList.add('active');
 
+  // 파싱: "지명수어_춘천" → group="지명수어", sub="춘천"
+  const parsed = parseCat(cat);
+  currentGroup = parsed.group;
+
+  // 브레드크럼
   document.getElementById('bMenu').textContent = currentMenu.name;
-  document.getElementById('bCat').textContent  = cat;
+  if (parsed.group) {
+    document.getElementById('bGroup').textContent = parsed.group;
+    document.getElementById('bGroup').style.display = '';
+    document.getElementById('bGroupSep').style.display = '';
+    document.getElementById('bCat').textContent = parsed.sub;
+  } else {
+    document.getElementById('bGroup').style.display = 'none';
+    document.getElementById('bGroupSep').style.display = 'none';
+    document.getElementById('bCat').textContent = cat;
+  }
+
+  // 제목 (하위 지역명만 표시)
   const title = document.getElementById('vsTitle');
-  title.textContent = cat;
+  title.textContent = parsed.group ? parsed.sub : cat;
   title.style.color = currentMenu.color;
+
   document.getElementById('addVideoBtn').style.display = isAdmin ? '' : 'none';
   renderVideos();
 }
@@ -1075,12 +1179,20 @@ function goHome() {
   document.getElementById('homeScreen').style.display = '';
   document.getElementById('addForm').classList.remove('open');
   document.getElementById('addVideoBtn').style.display = 'none';
-  // 검색어는 유지 (지우지 않음)
-  currentMenu = null; currentCat = null;
+  // 검색어 초기화
+  const inp = document.getElementById('globalSearchInput');
+  inp.value = '';
+  document.getElementById('searchClearBtn').classList.remove('visible');
+  currentMenu = null; currentCat = null; currentGroup = null;
   initFan();
 }
 
 function openSubFromBread() {
+  if (currentMenu) openSubPanel(MENUS.findIndex(m => m.id === currentMenu.id));
+}
+
+/* 브레드크럼의 그룹명(예: 지명수어) 클릭 → 서브 패널 열기 */
+function openGroupPanel() {
   if (currentMenu) openSubPanel(MENUS.findIndex(m => m.id === currentMenu.id));
 }
 
