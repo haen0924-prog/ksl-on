@@ -350,21 +350,22 @@ header {
 .sub-menu-desc { font-size: 13px; color: var(--ink2); margin-top: 2px; }
 
 .sub-cats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; padding-top: 8px; }
-.sub-cat-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; border: 2px solid transparent; background: white; transition: all 0.2s; font-family: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative; }
+.sub-cat-btn { display: flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; border: 2px solid transparent; background: white; transition: all 0.2s; font-family: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative; overflow: visible; }
 .sub-cat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
 .sub-cat-btn.active { color: white !important; }
 .sub-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .sub-cat-count { font-size: 11px; font-weight: 500; opacity: 0.7; font-family: monospace; }
 
-.sub-cat-del { display: none; position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #d03020; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
+.sub-cat-del { display: none; width: 20px; height: 20px; border-radius: 50%; background: #d03020; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; flex-shrink: 0; transition: background 0.15s; }
+.sub-cat-del:hover { background: #b02010; }
 body.admin-mode .sub-cat-del { display: flex; }
 
-.sub-cat-edit { display: none; position: absolute; top: -8px; right: 16px; width: 20px; height: 20px; border-radius: 50%; background: #3a6ee8; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
+.sub-cat-edit { display: none; width: 20px; height: 20px; border-radius: 50%; background: #3a6ee8; color: white; font-size: 11px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; flex-shrink: 0; transition: background 0.15s; }
+.sub-cat-edit:hover { background: #2a5fd8; }
 body.admin-mode .sub-cat-edit { display: flex; }
 
-.sub-cat-up, .sub-cat-dn { display: none; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #888; color: white; font-size: 10px; font-weight: 700; border: none; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; }
-.sub-cat-up { top: -8px; left: 16px; }
-.sub-cat-dn { top: -8px; left: 38px; }
+.sub-cat-up, .sub-cat-dn { display: none; width: 20px; height: 20px; border-radius: 50%; background: rgba(100,100,100,0.12); color: #777; font-size: 10px; font-weight: 700; border: 1.5px solid #ccc; cursor: pointer; align-items: center; justify-content: center; line-height: 1; text-align: center; user-select: none; flex-shrink: 0; transition: all 0.15s; }
+.sub-cat-up:hover, .sub-cat-dn:hover { background: #777; color: white; border-color: #777; }
 body.admin-mode .sub-cat-up,
 body.admin-mode .sub-cat-dn { display: flex; }
 
